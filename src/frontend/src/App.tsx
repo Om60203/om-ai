@@ -1,6 +1,8 @@
 import { Toaster } from "@/components/ui/sonner";
 import { useEffect, useState } from "react";
 import { LoginModal, SignupModal } from "./components/AuthModals";
+import { SunoOmOverlay } from "./components/SunoOmOverlay";
+import { useWakeWord } from "./hooks/useWakeWord";
 import { AdminLogin } from "./pages/AdminLogin";
 import { AdminPanel } from "./pages/AdminPanel";
 import { ChatPage } from "./pages/ChatPage";
@@ -27,6 +29,10 @@ export default function App() {
   const [isDark, setIsDark] = useState(true);
   const [isGuest, setIsGuest] = useState(false);
   const [guestSessionId, setGuestSessionId] = useState("");
+
+  // Wake word only active on chat page, not on landing/login/signup/admin pages
+  const wakeWordEnabled = view === "chat";
+  const { isTriggered, setIsTriggered } = useWakeWord(wakeWordEnabled);
 
   useEffect(() => {
     setGuestSessionId(getOrCreateGuestSessionId());
@@ -93,6 +99,7 @@ export default function App() {
       {view === "voice-mode" && (
         <VoiceModePage onBack={() => setView("chat")} />
       )}
+
       <LoginModal
         open={showLogin}
         onClose={() => setShowLogin(false)}
@@ -111,6 +118,10 @@ export default function App() {
           setShowLogin(true);
         }}
       />
+
+      {/* Small bottom overlay when "Suno Om" is detected -- no visible button anywhere */}
+      {isTriggered && <SunoOmOverlay onClose={() => setIsTriggered(false)} />}
+
       <Toaster position="top-right" />
     </div>
   );

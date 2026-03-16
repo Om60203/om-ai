@@ -123,7 +123,13 @@ function MessageBubble({
     window.speechSynthesis.cancel();
     const utter = new SpeechSynthesisUtterance(message.content);
     utter.lang = voiceLang;
+    utter.pitch = 1.0;
     utter.rate = 0.95;
+    const voices = window.speechSynthesis.getVoices();
+    const langVoice = voices.find((v) =>
+      v.lang.startsWith(voiceLang === "hi-IN" ? "hi" : "en"),
+    );
+    if (langVoice) utter.voice = langVoice;
     window.speechSynthesis.speak(utter);
   }, [message.content, voiceLang]);
 
@@ -440,7 +446,13 @@ export function ChatPage({
       window.speechSynthesis.cancel();
       const utter = new SpeechSynthesisUtterance(aiResponse);
       utter.lang = voiceLang;
+      utter.pitch = 1.0;
       utter.rate = 0.95;
+      const voices = window.speechSynthesis.getVoices();
+      const langVoice = voices.find((v) =>
+        v.lang.startsWith(voiceLang === "hi-IN" ? "hi" : "en"),
+      );
+      if (langVoice) utter.voice = langVoice;
       utter.onstart = () => setIsSpeaking(true);
       utter.onend = () => setIsSpeaking(false);
       utter.onerror = () => setIsSpeaking(false);
@@ -507,6 +519,32 @@ export function ChatPage({
 
     recognition.onresult = (event: any) => {
       const transcript = event.results[0][0].transcript;
+      const lower = transcript.toLowerCase().trim();
+
+      // Voice copy command: copy all conversation messages
+      if (
+        lower.includes("copy all text") ||
+        lower.includes("saara text copy") ||
+        lower.includes("sab copy karo")
+      ) {
+        const msgs = messages;
+        if (msgs && msgs.length > 0) {
+          const formatted = msgs
+            .map(
+              (m: { role: string; content: string }) =>
+                `${m.role === "user" ? "User" : "AI"}: ${m.content}`,
+            )
+            .join("\n\n");
+          navigator.clipboard
+            .writeText(formatted)
+            .then(() => toast.success("Saara conversation copy ho gaya!"))
+            .catch(() => toast.error("Copy failed. Please try manually."));
+        } else {
+          toast.info("Abhi koi conversation nahi hai.");
+        }
+        return;
+      }
+
       setInput((prev) => (prev ? `${prev} ${transcript}` : transcript));
     };
     recognition.onerror = () => {
@@ -520,7 +558,7 @@ export function ChatPage({
     recognitionRef.current = recognition;
     recognition.start();
     setIsRecording(true);
-  }, [isRecording, voiceLang]);
+  }, [isRecording, voiceLang, messages]);
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
@@ -692,317 +730,316 @@ export function ChatPage({
       )}
 
       {/* Main area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <header
-          className="flex items-center justify-between px-3 md:px-6 py-3 shrink-0"
-          style={{
-            borderBottom: "1px solid oklch(0.12 0.04 220)",
-            background: "oklch(0.07 0.025 220)",
-          }}
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(true)}
-              className="md:hidden w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
-              style={{
-                background: "oklch(0.12 0.03 220)",
-                border: "1px solid oklch(0.2 0.06 185)",
-                color: "oklch(0.65 0.15 185)",
-              }}
-              data-ocid="chat.toggle"
-            >
-              <Menu size={16} />
-            </button>
-
-            <div
-              className="hidden md:flex items-center shrink-0"
-              style={{ width: 30, height: 39, overflow: "hidden" }}
-            >
-              <div
-                style={{
-                  transform: "scale(0.214)",
-                  transformOrigin: "top left",
-                  width: 140,
-                  height: 180,
-                }}
-              >
-                <RobotMascot isSpeaking={isSpeaking} />
-              </div>
-            </div>
-
-            <h2
-              className="font-medium text-xs md:text-sm truncate"
-              style={{ color: "oklch(0.75 0.06 185)" }}
-            >
-              {activeConv ? activeConv.title : "New Conversation"}
-            </h2>
-          </div>
-
-          <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
-            {/* Real AI indicator */}
-            {usingRealAI && (
-              <div
-                className="hidden md:flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold"
-                style={{
-                  background: "oklch(0.15 0.08 145)",
-                  border: "1px solid oklch(0.3 0.12 145)",
-                  color: "oklch(0.7 0.18 145)",
-                }}
-              >
-                <Zap size={10} /> Live AI
-              </div>
-            )}
-
-            <button
-              type="button"
-              onClick={() =>
-                setVoiceLang((l) => (l === "en-US" ? "hi-IN" : "en-US"))
-              }
-              className="h-7 px-2 rounded-lg text-xs font-semibold transition-colors"
-              style={{
-                background: "oklch(0.12 0.03 220)",
-                border: "1px solid oklch(0.2 0.06 185)",
-                color: "oklch(0.65 0.22 185)",
-              }}
-              title="Toggle voice language"
-              data-ocid="chat.toggle"
-            >
-              {voiceLang === "en-US" ? "EN" : "HI"}
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                if (ttsEnabled) {
-                  window.speechSynthesis?.cancel();
-                  setIsSpeaking(false);
-                }
-                setTtsEnabled((v) => !v);
-              }}
-              className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-              style={{
-                background: "oklch(0.12 0.03 220)",
-                border: "1px solid oklch(0.2 0.06 185)",
-                color: ttsEnabled
-                  ? "oklch(0.65 0.22 185)"
-                  : "oklch(0.45 0.05 220)",
-              }}
-              title={ttsEnabled ? "Mute voice" : "Unmute voice"}
-              data-ocid="chat.toggle"
-            >
-              {ttsEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
-            </button>
-
-            <Select value={model} onValueChange={setModel}>
-              <SelectTrigger
-                className="h-8 w-28 md:w-32 text-xs"
+      <div className="flex-1 flex min-w-0 overflow-hidden">
+        <div className="flex-1 flex flex-col min-w-0">
+          <header
+            className="flex items-center justify-between px-3 md:px-6 py-3 shrink-0"
+            style={{
+              borderBottom: "1px solid oklch(0.12 0.04 220)",
+              background: "oklch(0.07 0.025 220)",
+            }}
+          >
+            <div className="flex items-center gap-2 min-w-0">
+              <button
+                type="button"
+                onClick={() => setSidebarOpen(true)}
+                className="md:hidden w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
                 style={{
                   background: "oklch(0.12 0.03 220)",
                   border: "1px solid oklch(0.2 0.06 185)",
-                  color: "oklch(0.7 0.1 185)",
+                  color: "oklch(0.65 0.15 185)",
                 }}
-                data-ocid="chat.select"
+                data-ocid="chat.toggle"
               >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="om-1">Om-1</SelectItem>
-                <SelectItem value="om-2-pro">Om-2 Pro</SelectItem>
-              </SelectContent>
-            </Select>
+                <Menu size={16} />
+              </button>
 
-            <button
-              type="button"
-              onClick={onToggleTheme}
-              className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
-              style={{
-                background: "oklch(0.12 0.03 220)",
-                border: "1px solid oklch(0.2 0.06 185)",
-                color: "oklch(0.65 0.15 185)",
-              }}
-              data-ocid="chat.toggle"
-            >
-              {isDark ? <Sun size={14} /> : <Moon size={14} />}
-            </button>
-          </div>
-        </header>
-
-        {/* Guest sign-up nudge banner */}
-        {isGuest && !nudgeDismissed && (
-          <div
-            className="flex items-center justify-between px-4 py-2.5 text-sm shrink-0"
-            style={{
-              background: "oklch(0.12 0.06 185)",
-              borderBottom: "1px solid oklch(0.22 0.1 185)",
-            }}
-            data-ocid="chat.panel"
-          >
-            <span
-              className="text-xs md:text-sm"
-              style={{ color: "oklch(0.82 0.1 185)" }}
-            >
-              Chatting as Guest.{" "}
-              <button
-                type="button"
-                onClick={onSignUp}
-                className="underline underline-offset-2 font-semibold transition-opacity hover:opacity-80"
-                style={{ color: "oklch(0.65 0.22 185)" }}
-              >
-                Sign up
-              </button>{" "}
-              to save history.
-            </span>
-            <button
-              type="button"
-              onClick={() => setNudgeDismissed(true)}
-              className="ml-4 shrink-0 transition-opacity hover:opacity-70"
-              style={{ color: "oklch(0.55 0.08 185)" }}
-              data-ocid="chat.close_button"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        )}
-
-        {/* Messages area - using regular div with overflow-y-auto for reliable scroll */}
-        <div
-          ref={messagesContainerRef}
-          className="flex-1 overflow-y-auto px-3 md:px-8 py-4 md:py-6"
-          style={{ scrollBehavior: "smooth" }}
-        >
-          <div className="max-w-3xl mx-auto space-y-5 md:space-y-6">
-            {msgsLoading ? (
-              <div className="space-y-4" data-ocid="chat.loading_state">
-                {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-16 w-full rounded-xl" />
-                ))}
-              </div>
-            ) : messages.length === 0 ? (
               <div
-                className="flex flex-col items-center gap-4 py-8 md:py-12"
-                data-ocid="chat.empty_state"
+                className="hidden md:flex items-center shrink-0"
+                style={{ width: 30, height: 39, overflow: "hidden" }}
               >
-                <div className="scale-75 md:scale-90 origin-top">
+                <div
+                  style={{
+                    transform: "scale(0.214)",
+                    transformOrigin: "top left",
+                    width: 140,
+                    height: 180,
+                  }}
+                >
                   <RobotMascot isSpeaking={isSpeaking} />
                 </div>
-                <div className="text-center">
-                  <h3
-                    className="font-display font-semibold text-lg md:text-xl mb-2"
-                    style={{ color: "oklch(0.85 0.08 185)" }}
+              </div>
+
+              <h2
+                className="font-medium text-xs md:text-sm truncate"
+                style={{ color: "oklch(0.75 0.06 185)" }}
+              >
+                {activeConv ? activeConv.title : "New Conversation"}
+              </h2>
+            </div>
+
+            <div className="flex items-center gap-1.5 md:gap-3 shrink-0">
+              {/* Real AI indicator */}
+              {usingRealAI && (
+                <div
+                  className="hidden md:flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold"
+                  style={{
+                    background: "oklch(0.15 0.08 145)",
+                    border: "1px solid oklch(0.3 0.12 145)",
+                    color: "oklch(0.7 0.18 145)",
+                  }}
+                >
+                  <Zap size={10} /> Live AI
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() =>
+                  setVoiceLang((l) => (l === "en-US" ? "hi-IN" : "en-US"))
+                }
+                className="h-7 px-2 rounded-lg text-xs font-semibold transition-colors"
+                style={{
+                  background: "oklch(0.12 0.03 220)",
+                  border: "1px solid oklch(0.2 0.06 185)",
+                  color: "oklch(0.65 0.22 185)",
+                }}
+                title="Toggle voice language"
+                data-ocid="chat.toggle"
+              >
+                {voiceLang === "en-US" ? "EN" : "HI"}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (ttsEnabled) {
+                    window.speechSynthesis?.cancel();
+                    setIsSpeaking(false);
+                  }
+                  setTtsEnabled((v) => !v);
+                }}
+                className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+                style={{
+                  background: "oklch(0.12 0.03 220)",
+                  border: "1px solid oklch(0.2 0.06 185)",
+                  color: ttsEnabled
+                    ? "oklch(0.65 0.22 185)"
+                    : "oklch(0.45 0.05 220)",
+                }}
+                title={ttsEnabled ? "Mute voice" : "Unmute voice"}
+                data-ocid="chat.toggle"
+              >
+                {ttsEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}
+              </button>
+
+              <Select value={model} onValueChange={setModel}>
+                <SelectTrigger
+                  className="h-8 w-28 md:w-32 text-xs"
+                  style={{
+                    background: "oklch(0.12 0.03 220)",
+                    border: "1px solid oklch(0.2 0.06 185)",
+                    color: "oklch(0.7 0.1 185)",
+                  }}
+                  data-ocid="chat.select"
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="om-1">Om-1</SelectItem>
+                  <SelectItem value="om-2-pro">Om-2 Pro</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <button
+                type="button"
+                onClick={onToggleTheme}
+                className="w-8 h-8 rounded-lg flex items-center justify-center transition-colors"
+                style={{
+                  background: "oklch(0.12 0.03 220)",
+                  border: "1px solid oklch(0.2 0.06 185)",
+                  color: "oklch(0.65 0.15 185)",
+                }}
+                data-ocid="chat.toggle"
+              >
+                {isDark ? <Sun size={14} /> : <Moon size={14} />}
+              </button>
+            </div>
+          </header>
+
+          {/* Guest sign-up nudge banner */}
+          {isGuest && !nudgeDismissed && (
+            <div
+              className="flex items-center justify-between px-4 py-2.5 text-sm shrink-0"
+              style={{
+                background: "oklch(0.12 0.06 185)",
+                borderBottom: "1px solid oklch(0.22 0.1 185)",
+              }}
+              data-ocid="chat.panel"
+            >
+              <span
+                className="text-xs md:text-sm"
+                style={{ color: "oklch(0.82 0.1 185)" }}
+              >
+                Chatting as Guest.{" "}
+                <button
+                  type="button"
+                  onClick={onSignUp}
+                  className="underline underline-offset-2 font-semibold transition-opacity hover:opacity-80"
+                  style={{ color: "oklch(0.65 0.22 185)" }}
+                >
+                  Sign up
+                </button>{" "}
+                to save history.
+              </span>
+              <button
+                type="button"
+                onClick={() => setNudgeDismissed(true)}
+                className="ml-4 shrink-0 transition-opacity hover:opacity-70"
+                style={{ color: "oklch(0.55 0.08 185)" }}
+                data-ocid="chat.close_button"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
+
+          {/* Messages area - using regular div with overflow-y-auto for reliable scroll */}
+          <div
+            ref={messagesContainerRef}
+            className="flex-1 overflow-y-auto px-3 md:px-8 py-4 md:py-6"
+            style={{ scrollBehavior: "smooth" }}
+          >
+            <div className="max-w-3xl mx-auto space-y-5 md:space-y-6">
+              {msgsLoading ? (
+                <div className="space-y-4" data-ocid="chat.loading_state">
+                  {[1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-16 w-full rounded-xl" />
+                  ))}
+                </div>
+              ) : messages.length === 0 ? (
+                <div
+                  className="flex flex-col items-center gap-4 py-8 md:py-12"
+                  data-ocid="chat.empty_state"
+                >
+                  <div className="scale-75 md:scale-90 origin-top">
+                    <RobotMascot isSpeaking={isSpeaking} />
+                  </div>
+                  <div className="text-center">
+                    <h3
+                      className="font-display font-semibold text-lg md:text-xl mb-2"
+                      style={{ color: "oklch(0.85 0.08 185)" }}
+                    >
+                      How can I help you today?
+                    </h3>
+                  </div>
+                </div>
+              ) : (
+                messages.map((msg) => (
+                  <MessageBubble
+                    key={
+                      "id" in msg ? msg.id.toString() : (msg as LocalMessage).id
+                    }
+                    message={msg}
+                    voiceLang={voiceLang}
+                    ttsEnabled={ttsEnabled}
+                  />
+                ))
+              )}
+              {isTyping && <TypingIndicator />}
+              <div ref={messagesEndRef} style={{ height: 1 }} />
+            </div>
+          </div>
+
+          <div
+            className="px-3 md:px-8 py-3 md:py-4 shrink-0"
+            style={{ borderTop: "1px solid oklch(0.12 0.04 220)" }}
+          >
+            <div className="max-w-3xl mx-auto">
+              <div
+                className="relative rounded-2xl overflow-hidden"
+                style={{
+                  background: "oklch(0.10 0.03 220)",
+                  border: "1px solid oklch(0.22 0.08 185)",
+                }}
+              >
+                <Textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Ask Om anything... (Shift+Enter for new line)"
+                  className="resize-none border-0 bg-transparent px-3 md:px-4 py-3.5 pr-24 text-sm focus-visible:ring-0 min-h-[52px] max-h-[160px] md:max-h-[200px]"
+                  style={{ color: "oklch(0.88 0.05 185)", fontSize: "16px" }}
+                  rows={1}
+                  data-ocid="chat.textarea"
+                />
+                <div className="absolute right-2 bottom-2.5 flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => onVoiceMode?.()}
+                    className="h-8 w-8 rounded-xl flex items-center justify-center transition-all"
+                    style={{
+                      background: "oklch(0.15 0.04 220)",
+                      color: "oklch(0.65 0.22 185)",
+                      border: "1px solid oklch(0.25 0.08 185)",
+                    }}
+                    title="Voice Mode - Doraemon AI"
+                    data-ocid="chat.toggle"
                   >
-                    How can I help you today?
-                  </h3>
-                  <p className="text-muted-foreground text-xs md:text-sm">
-                    Ask me anything — coding, GK, science, math, or just chat!
-                  </p>
+                    <Headphones size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleMicToggle}
+                    className={`h-8 w-8 rounded-xl flex items-center justify-center transition-all ${
+                      isRecording ? "mic-recording" : ""
+                    }`}
+                    style={{
+                      background: isRecording
+                        ? "oklch(0.65 0.2 15)"
+                        : "oklch(0.15 0.04 220)",
+                      color: isRecording
+                        ? "oklch(0.98 0.01 0)"
+                        : "oklch(0.65 0.22 185)",
+                      border: isRecording
+                        ? "1px solid oklch(0.55 0.2 15)"
+                        : "1px solid oklch(0.25 0.08 185)",
+                    }}
+                    title={isRecording ? "Stop recording" : "Start voice input"}
+                    data-ocid="chat.toggle"
+                  >
+                    {isRecording ? <MicOff size={14} /> : <Mic size={14} />}
+                  </button>
+
+                  <Button
+                    onClick={handleSend}
+                    disabled={!input.trim() || isTyping}
+                    size="sm"
+                    className="h-8 w-8 p-0 rounded-xl"
+                    style={{
+                      background:
+                        input.trim() && !isTyping
+                          ? "oklch(0.65 0.22 185)"
+                          : "oklch(0.15 0.04 220)",
+                      color:
+                        input.trim() && !isTyping
+                          ? "oklch(0.1 0.02 220)"
+                          : "oklch(0.35 0.05 220)",
+                    }}
+                    data-ocid="chat.submit_button"
+                  >
+                    {isTyping ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : (
+                      <Send size={14} />
+                    )}
+                  </Button>
                 </div>
               </div>
-            ) : (
-              messages.map((msg) => (
-                <MessageBubble
-                  key={
-                    "id" in msg ? msg.id.toString() : (msg as LocalMessage).id
-                  }
-                  message={msg}
-                  voiceLang={voiceLang}
-                  ttsEnabled={ttsEnabled}
-                />
-              ))
-            )}
-            {isTyping && <TypingIndicator />}
-            <div ref={messagesEndRef} style={{ height: 1 }} />
-          </div>
-        </div>
-
-        <div
-          className="px-3 md:px-8 py-3 md:py-4 shrink-0"
-          style={{ borderTop: "1px solid oklch(0.12 0.04 220)" }}
-        >
-          <div className="max-w-3xl mx-auto">
-            <div
-              className="relative rounded-2xl overflow-hidden"
-              style={{
-                background: "oklch(0.10 0.03 220)",
-                border: "1px solid oklch(0.22 0.08 185)",
-              }}
-            >
-              <Textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Ask Om anything... (Shift+Enter for new line)"
-                className="resize-none border-0 bg-transparent px-3 md:px-4 py-3.5 pr-24 text-sm focus-visible:ring-0 min-h-[52px] max-h-[160px] md:max-h-[200px]"
-                style={{ color: "oklch(0.88 0.05 185)", fontSize: "16px" }}
-                rows={1}
-                data-ocid="chat.textarea"
-              />
-              <div className="absolute right-2 bottom-2.5 flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => onVoiceMode?.()}
-                  className="h-8 w-8 rounded-xl flex items-center justify-center transition-all"
-                  style={{
-                    background: "oklch(0.15 0.04 220)",
-                    color: "oklch(0.65 0.22 185)",
-                    border: "1px solid oklch(0.25 0.08 185)",
-                  }}
-                  title="Voice Mode - Doraemon AI"
-                  data-ocid="chat.toggle"
-                >
-                  <Headphones size={14} />
-                </button>
-                <button
-                  type="button"
-                  onClick={handleMicToggle}
-                  className={`h-8 w-8 rounded-xl flex items-center justify-center transition-all ${
-                    isRecording ? "mic-recording" : ""
-                  }`}
-                  style={{
-                    background: isRecording
-                      ? "oklch(0.65 0.2 15)"
-                      : "oklch(0.15 0.04 220)",
-                    color: isRecording
-                      ? "oklch(0.98 0.01 0)"
-                      : "oklch(0.65 0.22 185)",
-                    border: isRecording
-                      ? "1px solid oklch(0.55 0.2 15)"
-                      : "1px solid oklch(0.25 0.08 185)",
-                  }}
-                  title={isRecording ? "Stop recording" : "Start voice input"}
-                  data-ocid="chat.toggle"
-                >
-                  {isRecording ? <MicOff size={14} /> : <Mic size={14} />}
-                </button>
-
-                <Button
-                  onClick={handleSend}
-                  disabled={!input.trim() || isTyping}
-                  size="sm"
-                  className="h-8 w-8 p-0 rounded-xl"
-                  style={{
-                    background:
-                      input.trim() && !isTyping
-                        ? "oklch(0.65 0.22 185)"
-                        : "oklch(0.15 0.04 220)",
-                    color:
-                      input.trim() && !isTyping
-                        ? "oklch(0.1 0.02 220)"
-                        : "oklch(0.35 0.05 220)",
-                  }}
-                  data-ocid="chat.submit_button"
-                >
-                  {isTyping ? (
-                    <Loader2 size={14} className="animate-spin" />
-                  ) : (
-                    <Send size={14} />
-                  )}
-                </Button>
-              </div>
+              <p className="text-center text-xs mt-2 text-muted-foreground">
+                Om can make mistakes. Verify important information.
+              </p>
             </div>
-            <p className="text-center text-xs mt-2 text-muted-foreground">
-              Om can make mistakes. Verify important information.
-            </p>
           </div>
         </div>
       </div>

@@ -188,6 +188,22 @@ export function getMockResponse(input: string): string {
     return "I'm doing great, thanks for asking! My systems are running smoothly and I'm ready to help. What's on your mind today?";
   }
 
+  // ---- OWNER INFO ----
+  if (
+    /who is your owner|who made you|who created you|tumhara owner kaun|kisne banaya|apka malik|owner kaun hai|owner batao|owner ke baare mein|tell me about your owner|owner ka naam|owner name/.test(
+      lower,
+    )
+  ) {
+    return "🇮🇳 **Proudly from India — Bharat ka Beta!**\n\nMera owner hain **Om Awasthi** — ek passionate Web Developer aur tech enthusiast.\n\n**🎓 Education:**\nBachelor of Computer Application (BCA) — Allenhouse Business School\n\n**💻 Web Development Skills:**\nHTML, CSS, JavaScript, React, TypeScript, Node.js, Git aur modern web technologies mein expert hain.\n\n**🎯 Hobbies & Interests:**\nCoding, AI & Technology, Web Projects, Cricket, aur nayi cheezein seekhna — always learning, always growing!\n\n**📱 Contact & Social:**\n- 📞 Phone: 8081024044\n- 📸 Instagram: om_awasthi11\n\nEk bahut hi interesting aur talented person hain! Kya aap unke baare mein aur jaanna chahte hain?";
+  }
+
+  if (
+    /aur batao|more about him|tell me more about om|om ke baare|more about owner|owner ke baare aur|contact owner/.test(
+      lower,
+    )
+  ) {
+    return "**Om Awasthi — Detailed Profile:**\n\n🇮🇳 **Nationality:** Indian — Proudly from Bharat!\n\n**🎓 Currently Pursuing:** Bachelor of Computer Application (BCA) from Allenhouse Business School — learning the latest in computer science & tech.\n\n**💻 Tech Stack:** HTML5, CSS3, JavaScript (ES6+), React.js, TypeScript, Node.js, Git/GitHub, Responsive Design\n\n**🌟 Passion:** Web development aur AI mein deep interest hai — future mein ek bada tech innovator banne ka sapna hai!\n\n**🎯 Hobbies:** Coding projects banana, cricket dekhna, new technologies explore karna, aur tech blogs padhna.\n\n**📱 Contact:**\n- 📞 8081024044\n- 📸 Instagram: @om_awasthi11\n\nAgar unse contact karna ho ya project ke liye collaborate karna ho — reach out karo! 🚀";
+  }
   if (
     /your name|who are you|what are you|aap kaun|tumhara naam|introduce yourself/.test(
       lower,
@@ -660,16 +676,6 @@ export function getMockResponse(input: string): string {
     return "Sab theek hai! Main Om hoon — Om.ai ka AI assistant. Koi bhi sawaal poochh sakte hain: GK, coding, science, maths, ya koi bhi topic!";
   }
 
-  // ---- WHAT IS / EXPLAIN ----
-  if (/what is|explain|define|tell me about/.test(lower)) {
-    const topic = lower
-      .replace(/what is|explain|define|tell me about/, "")
-      .trim();
-    if (topic.length > 2) {
-      return `**${topic.charAt(0).toUpperCase() + topic.slice(1)}** is an important concept. Here's what I know:\n\nThis topic has several key aspects worth exploring. For the most accurate and detailed answer, please ask more specifically:\n\n- "Explain ${topic} in science"\n- "What is ${topic} in mathematics"\n- "History of ${topic}"\n\nI'll give you a much better targeted answer!`;
-    }
-  }
-
   // ---- DEFAULT ----
-  return `I understand you asked: **"${input}"**\n\nI can help with many topics! Try asking:\n\n**🇮🇳 India:** capitals, history, cricket, Bollywood, ISRO, festivals\n**🔬 Science:** physics, chemistry, biology, space\n**🧮 Maths:** calculations, formulas, prime numbers\n**💻 Coding:** Python, JavaScript, React, CSS, Git\n**🌍 World:** capitals, world records, history\n**🤖 Tech:** AI, internet, blockchain, 5G\n\nAsk with more detail for a better answer!`;
+  return "Sorry, is sawaal ka jawab mere paas nahi hai. Koi aur sawaal poochho!";
 }
